@@ -1,0 +1,7 @@
+services:
+  app:
+    image: nextbike-collector:v1.1
+    volumes:
+      - ./values.yaml:/app/values.yaml
+      - ./output-json:/app/output-json
+      - ./output-parquet:/app/output-parquet

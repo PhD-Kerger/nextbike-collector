@@ -1,0 +1,19 @@
+url: https://maps.nextbike.net/maps/nextbike-live.json
+output_root_path_json: /app/output-json
+output_root_path_parquet: /app/output-parquet
+move_parquet_files_to_samba_share_cron_expression: '0 8,11,14,17 * * *'  # Daily at 8AM, 11AM, 2PM, 5PM
+SMB_address: '192.168.167.166:445' # Address of the Samba server 192.168.167.166 is an example, replace it with your actual server address
+SMB_username: 'samba_user'
+SMB_password: 'samba_password'
+SMB_workgroup: 'WORKGROUP'
+SMB_path_to_mount: 'samba-server' # Path on the Samba server that is mounted by the go-smb2 client
+SMB_path_inside_mount: 'nextbike-scraper'  # Path inside the Samba share where the Parquet files will be stored. The complete path will be constructed as: /<SMB_path_to_mount>/<SMB_path_inside_mount>
+targets: 
+  - name: Germany
+    filter: ?countries=DE
+    scrape_cron_expression: '* * * * *'  # Every minute
+    compact_cron_expression: '0 12 * * *'  # Daily at noon
+  - name: Global
+    filter: ''
+    scrape_cron_expression: '*/5 * * * *'  # Every 5 minutes
+    compact_cron_expression: '0 13 * * *'  # Daily at 1 PM
