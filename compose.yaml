@@ -1,6 +1,8 @@
 services:
   app:
-    image: nextbike-collector:v1.1
+    image: nextbike-collector:latest
+    container_name: nextbike-collector
+    restart: unless-stopped
     volumes:
       - ./values.yaml:/app/values.yaml
       - ./output-json:/app/output-json

@@ -41,9 +41,9 @@ func collectJsonFiles(dir string) []JsonFile {
 	return files
 }
 
-func convertFolder(inputDir, outputDir string) error {
+func convertFolder(inputDir, outputDir, targetName string) error {
 	files := collectJsonFiles(inputDir)
-	logging.Logger.Info("[Compactor] Found files to convert", "count", len(files), "input_dir", inputDir)
+	logging.Logger.Info("["+targetName+"] Compacting: found files to convert", "count", len(files), "input_dir", inputDir)
 
 	// Create output directory if it doesn't exist
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
@@ -86,38 +86,18 @@ func convertFolder(inputDir, outputDir string) error {
 	countryWriter := parquet.NewGenericWriter[types.FlatCountry](countryFile,
 		parquet.Compression(&zstd.Codec{}),
 	)
-	defer func() {
-		if err := countryWriter.Close(); err != nil {
-			logging.Logger.Error("[Compactor] Failed to close country writer", "err", err)
-		}
-	}()
 
 	cityWriter := parquet.NewGenericWriter[types.FlatCity](cityFile,
 		parquet.Compression(&zstd.Codec{}),
 	)
-	defer func() {
-		if err := cityWriter.Close(); err != nil {
-			logging.Logger.Error("[Compactor] Failed to close city writer", "err", err)
-		}
-	}()
 
 	placeWriter := parquet.NewGenericWriter[types.FlatPlace](placeFile,
 		parquet.Compression(&zstd.Codec{}),
 	)
-	defer func() {
-		if err := placeWriter.Close(); err != nil {
-			logging.Logger.Error("[Compactor] Failed to close place writer", "err", err)
-		}
-	}()
 
 	bikeWriter := parquet.NewGenericWriter[types.FlatBike](bikeFile,
 		parquet.Compression(&zstd.Codec{}),
 	)
-	defer func() {
-		if err := bikeWriter.Close(); err != nil {
-			logging.Logger.Error("[Compactor] Failed to close bike writer", "err", err)
-		}
-	}()
 
 	// Process files in small batches to reduce memory usage
 	const batchSize = 40 // Process 120 files at a time
@@ -128,26 +108,60 @@ func convertFolder(inputDir, outputDir string) error {
 		}
 
 		batch := files[i:end]
-		if err := processBatch(batch, countryWriter, cityWriter, placeWriter, bikeWriter); err != nil {
-			logging.Logger.Error("[Compactor] Failed to process batch", "batch_start", i, "batch_end", end, "err", err)
+		if err := processBatch(batch, countryWriter, cityWriter, placeWriter, bikeWriter, targetName); err != nil {
+			logging.Logger.Error("["+targetName+"] Compacting: failed to process batch", "batch_start", i, "batch_end", end, "err", err)
 			return err
 		}
 
-		logging.Logger.Info("[Compactor] Processed batch", "batch_start", i, "batch_end", end, "total", len(files))
+		logging.Logger.Info("["+targetName+"] Compacting: processed batch", "batch_start", i, "batch_end", end, "total", len(files))
+	}
+
+	// Close writers to flush all data before reading file sizes
+	if err := countryWriter.Close(); err != nil {
+		logging.Logger.Error("["+targetName+"] Compacting: failed to close country writer", "err", err)
+	}
+	if err := cityWriter.Close(); err != nil {
+		logging.Logger.Error("["+targetName+"] Compacting: failed to close city writer", "err", err)
+	}
+	if err := placeWriter.Close(); err != nil {
+		logging.Logger.Error("["+targetName+"] Compacting: failed to close place writer", "err", err)
+	}
+	if err := bikeWriter.Close(); err != nil {
+		logging.Logger.Error("["+targetName+"] Compacting: failed to close bike writer", "err", err)
+	}
+
+	// Collect parquet file sizes
+	var countrySizeBytes, citySizeBytes, placeSizeBytes, bikeSizeBytes int64
+	if info, err := os.Stat(filepath.Join(outputDir, "Countries.parquet")); err == nil {
+		countrySizeBytes = info.Size()
+	}
+	if info, err := os.Stat(filepath.Join(outputDir, "Cities.parquet")); err == nil {
+		citySizeBytes = info.Size()
+	}
+	if info, err := os.Stat(filepath.Join(outputDir, "Places.parquet")); err == nil {
+		placeSizeBytes = info.Size()
+	}
+	if info, err := os.Stat(filepath.Join(outputDir, "Bikes.parquet")); err == nil {
+		bikeSizeBytes = info.Size()
 	}
 
 	// delete the input directory after processing
 	if err := os.RemoveAll(inputDir); err != nil {
-		logging.Logger.Error("[Compactor] Failed to delete input directory after processing", "input_dir", inputDir, "err", err)
+		logging.Logger.Error("["+targetName+"] Compacting: failed to delete input directory", "input_dir", inputDir, "err", err)
 		return fmt.Errorf("[Compactor] failed to delete input directory: %w", err)
 	}
 
-	logging.Logger.Info("[Compactor] Compaction completed", "input_dir", inputDir, "output_dir", outputDir)
+	logging.Logger.Info("["+targetName+"] Compacting: completed", "input_dir", inputDir, "output_dir", outputDir,
+		"countries_parquet_bytes", countrySizeBytes,
+		"cities_parquet_bytes", citySizeBytes,
+		"places_parquet_bytes", placeSizeBytes,
+		"bikes_parquet_bytes", bikeSizeBytes,
+	)
 	return nil
 }
 
 // processBatch processes a batch of JSON files and writes the data to parquet writers
-func processBatch(files []JsonFile, countryWriter *parquet.GenericWriter[types.FlatCountry], cityWriter *parquet.GenericWriter[types.FlatCity], placeWriter *parquet.GenericWriter[types.FlatPlace], bikeWriter *parquet.GenericWriter[types.FlatBike]) error {
+func processBatch(files []JsonFile, countryWriter *parquet.GenericWriter[types.FlatCountry], cityWriter *parquet.GenericWriter[types.FlatCity], placeWriter *parquet.GenericWriter[types.FlatPlace], bikeWriter *parquet.GenericWriter[types.FlatBike], targetName string) error {
 	// Create small buffers for batch processing (much smaller than before)
 	var countries []types.FlatCountry
 	var cities []types.FlatCity
@@ -155,18 +169,18 @@ func processBatch(files []JsonFile, countryWriter *parquet.GenericWriter[types.F
 	var bikes []types.FlatBike
 
 	for _, file := range files {
-		logging.Logger.Info("[Compactor] Processing file", "path", file.Path, "timestamp", file.Timestamp)
+		logging.Logger.Info("["+targetName+"] Compacting: processing file", "path", file.Path, "timestamp", file.Timestamp)
 
 		f, err := os.Open(file.Path)
 		if err != nil {
-			logging.Logger.Error("[Compactor] Failed to open JSON file during compaction", "path", file.Path, "err", err)
+			logging.Logger.Error("["+targetName+"] Compacting: failed to open JSON file", "path", file.Path, "err", err)
 			continue
 		}
 
 		// Read the JSON file and unmarshal it into the Root struct
 		var root types.Root
 		if err := json.NewDecoder(f).Decode(&root); err != nil {
-			logging.Logger.Error("[Compactor] Failed to decode JSON file during compaction", "path", file.Path, "err", err)
+			logging.Logger.Error("["+targetName+"] Compacting: failed to decode JSON file", "path", file.Path, "err", err)
 			f.Close()
 			continue
 		}
@@ -248,15 +262,14 @@ func processBatch(files []JsonFile, countryWriter *parquet.GenericWriter[types.F
 		}
 	}
 
-	logging.Logger.Info("[Compactor] Batch written to parquet files", "countries", len(countries), "cities", len(cities), "places", len(places), "bikes", len(bikes))
+	logging.Logger.Info("["+targetName+"] Compacting: batch written to parquet files", "countries", len(countries), "cities", len(cities), "places", len(places), "bikes", len(bikes))
 	return nil
 }
 
 // target refers to the scraping target.
 func Compact(inputTargetDirPath, outputTargetDirPath string) {
-	logging.Logger.Info("[Compactor] Starting data compaction process")
-	logging.Logger.Info("[Compactor] Using output directory", "path", outputTargetDirPath)
-	logging.Logger.Info("[Compactor] Reading directories from input directory", "input_dir", inputTargetDirPath)
+	targetName := filepath.Base(inputTargetDirPath)
+	logging.Logger.Info("["+targetName+"] Compacting: starting", "output_dir", outputTargetDirPath, "input_dir", inputTargetDirPath)
 
 	var input_output_folders []struct {
 		input  string
@@ -266,7 +279,7 @@ func Compact(inputTargetDirPath, outputTargetDirPath string) {
 	// Read the entries in the input target directory
 	day_input_folders, err := os.ReadDir(inputTargetDirPath)
 	if err != nil {
-		logging.Logger.Error("[Compactor] Failed to read input target directory", "inputTargetDirPath", inputTargetDirPath, "err", err)
+		logging.Logger.Error("["+targetName+"] Compacting: failed to read input target directory", "inputTargetDirPath", inputTargetDirPath, "err", err)
 		return
 	}
 
@@ -274,7 +287,7 @@ func Compact(inputTargetDirPath, outputTargetDirPath string) {
 		if day_input_folder.IsDir() {
 			// check if the date of the folder (yyy-mm-dd) is before today
 			if day_input_folder.Name() >= time.Now().Format("2006-01-02") {
-				logging.Logger.Info("[Compactor] Skipping folder", "folder", day_input_folder.Name(), "reason", "as it is not before today")
+				logging.Logger.Info("["+targetName+"] Compacting: skipping folder (not before today)", "folder", day_input_folder.Name())
 				continue
 			}
 			if day_input_folder.IsDir() {
@@ -290,7 +303,7 @@ func Compact(inputTargetDirPath, outputTargetDirPath string) {
 		}
 	}
 
-	logging.Logger.Info("[Compactor] Found input/output folders", "count", len(input_output_folders))
+	logging.Logger.Info("["+targetName+"] Compacting: found day folders", "count", len(input_output_folders))
 
 	sem := make(chan struct{}, 1) // threadpool with 2 workers
 	errCh := make(chan error, len(input_output_folders))
@@ -299,8 +312,8 @@ func Compact(inputTargetDirPath, outputTargetDirPath string) {
 		sem <- struct{}{}
 		go func(ioPair struct{ input, output string }) {
 			defer func() { <-sem }()
-			if err := convertFolder(ioPair.input, ioPair.output); err != nil {
-				errCh <- fmt.Errorf("[Compactor] failed to convert folder %s: %w", ioPair.input, err)
+			if err := convertFolder(ioPair.input, ioPair.output, targetName); err != nil {
+				errCh <- fmt.Errorf("["+targetName+"] compacting failed for folder %s: %w", ioPair.input, err)
 			} else {
 				errCh <- nil
 			}
@@ -310,7 +323,7 @@ func Compact(inputTargetDirPath, outputTargetDirPath string) {
 	// Wait for all goroutines to finish
 	for i := 0; i < len(input_output_folders); i++ {
 		if err := <-errCh; err != nil {
-			logging.Logger.Error("[Compactor] Error during folder conversion", "err", err)
+			logging.Logger.Error("["+targetName+"] Compacting: error during folder conversion", "err", err)
 		}
 	}
 }

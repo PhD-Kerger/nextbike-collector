@@ -58,5 +58,10 @@ func ScrapeNextbike(ctx_ptr *context.Context) {
 		logging.Logger.Error("["+ctx.Value("targetName").(string)+"] Failed to write to output file", "path", outputPath, "error", err)
 		return
 	}
-	logging.Logger.Info("["+ctx.Value("targetName").(string)+"] Successfully saved scraped data", "path", outputPath)
+	fileInfo, err := file.Stat()
+	if err != nil {
+		logging.Logger.Error("["+ctx.Value("targetName").(string)+"] Failed to stat output file", "path", outputPath, "error", err)
+		return
+	}
+	logging.Logger.Info("["+ctx.Value("targetName").(string)+"] Successfully saved scraped data", "path", outputPath, "size_bytes", fileInfo.Size())
 }

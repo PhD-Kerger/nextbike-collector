@@ -197,7 +197,7 @@ func SetupScrapingCronJobs(config *config.ScraperConfig) *cron.Cron {
 		if target.Filter != nil && *target.Filter != "" {
 			targetURL = targetURL + *target.Filter
 		}
-		logging.Logger.Info("[Scraper] Scheduling scraping job", "target", target.Name, "url", targetURL, "cron_expression", target.ScrapeCronExpression)
+		logging.Logger.Info("["+target.Name+"] Scheduling scraping job", "target", target.Name, "url", targetURL, "cron_expression", target.ScrapeCronExpression)
 		ctx = context.WithValue(ctx, "targetName", target.Name)
 		ctx = context.WithValue(ctx, "targetURL", targetURL)
 		ctx = context.WithValue(ctx, "outputPath", config.OutputRootPathJSON+"/"+target.Name)
@@ -205,17 +205,17 @@ func SetupScrapingCronJobs(config *config.ScraperConfig) *cron.Cron {
 			scraping.ScrapeNextbike(&ctx)
 		})
 		if err != nil {
-			logging.Logger.Error("[Scraper] Failed to schedule scraping job", "target", target.Name, "err", err)
+			logging.Logger.Error("["+target.Name+"] Failed to schedule scraping job", "target", target.Name, "err", err)
 			continue
 		}
 
 		// add compactor job
-		logging.Logger.Info("[Scraper] Scheduling compactor job", "target", target.Name, "cron_expression", target.CompactCronExpression)
+		logging.Logger.Info("["+target.Name+"] Scheduling compactor job", "target", target.Name, "cron_expression", target.CompactCronExpression)
 		_, err = cronJobs.AddFunc(target.CompactCronExpression, func() {
 			compactor.Compact(config.OutputRootPathJSON+"/"+target.Name, config.OutputRootPathParquet+"/"+target.Name)
 		})
 		if err != nil {
-			logging.Logger.Error("[Scraper] Failed to schedule compactor job", "target", target.Name, "err", err)
+			logging.Logger.Error("["+target.Name+"] Failed to schedule compactor job", "target", target.Name, "err", err)
 			continue
 		}
 	}
