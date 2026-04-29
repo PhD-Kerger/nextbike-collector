@@ -1,6 +1,6 @@
 services:
   app:
-    image: nextbike-collector:latest
+    image: ghcr.io/phd-kerger/nextbike-collector:v1.2
     container_name: nextbike-collector
     restart: unless-stopped
     volumes:
