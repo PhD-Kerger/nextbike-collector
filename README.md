@@ -110,13 +110,7 @@ The Nextbike API provides hierarchical bike-sharing data that is processed into 
 
 ### Running with Docker
 
-1. Build the image:
-
-   ```bash
-   docker build -t nextbike-collector:latest .
-   ```
-
-2. Run with Docker Compose:
+1. Run with Docker Compose:
 
    ```bash
    docker-compose up -d
