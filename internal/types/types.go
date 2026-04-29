@@ -282,29 +282,29 @@ func (place *Place) ToFlat(timestamp uint32, cityUID uint32) FlatPlace {
 
 // Bike struct based on the provided Rust struct
 type Bike struct {
-	Number         string             `json:"number"`
-	BikeType       uint16             `json:"bike_type"`
-	LockTypes      []string           `json:"lock_types"`
-	Active         bool               `json:"active"`
-	State          *string            `json:"state,omitempty"`
-	ElectricLock   bool               `json:"electric_lock"`
-	Boardcomputer  uint64             `json:"boardcomputer"`
-	PedelecBattery *uint8             `json:"pedelec_battery,omitempty"`
-	BatteryPack    *map[string]uint32 `json:"battery_pack,omitempty"`
+	Number         string              `json:"number"`
+	BikeType       uint16              `json:"bike_type"`
+	LockTypes      []string            `json:"lock_types"`
+	Active         bool                `json:"active"`
+	State          *string             `json:"state,omitempty"`
+	ElectricLock   bool                `json:"electric_lock"`
+	Boardcomputer  uint64              `json:"boardcomputer"`
+	PedelecBattery *uint8              `json:"pedelec_battery,omitempty"`
+	BatteryPack    *map[string]float64 `json:"battery_pack,omitempty"`
 }
 
 type FlatBike struct {
-	Timestamp      uint32             `parquet:"timestamp"`
-	Place_UID      uint32             `parquet:"place_uid"`
-	Number         string             `parquet:"number"`
-	BikeType       uint32             `parquet:"bike_type"`
-	LockTypes      []string           `parquet:"lock_types"`
-	Active         bool               `parquet:"active"`
-	State          *string            `parquet:"state,optional"`
-	ElectricLock   bool               `parquet:"electric_lock"`
-	Boardcomputer  uint64             `parquet:"boardcomputer"`
-	PedelecBattery *uint32            `parquet:"pedelec_battery,optional"`
-	BatteryPack    *map[string]uint32 `parquet:"battery_pack,optional"`
+	Timestamp      uint32              `parquet:"timestamp"`
+	Place_UID      uint32              `parquet:"place_uid"`
+	Number         string              `parquet:"number"`
+	BikeType       uint32              `parquet:"bike_type"`
+	LockTypes      []string            `parquet:"lock_types"`
+	Active         bool                `parquet:"active"`
+	State          *string             `parquet:"state,optional"`
+	ElectricLock   bool                `parquet:"electric_lock"`
+	Boardcomputer  uint64              `parquet:"boardcomputer"`
+	PedelecBattery *uint32             `parquet:"pedelec_battery,optional"`
+	BatteryPack    *map[string]float64 `parquet:"battery_pack,optional"`
 }
 
 func (bike *Bike) ToFlat(timestamp uint32, placeUID uint32) FlatBike {
@@ -313,13 +313,13 @@ func (bike *Bike) ToFlat(timestamp uint32, placeUID uint32) FlatBike {
 		val := uint32(*bike.PedelecBattery)
 		pedelecBattery = &val
 	}
-	var batteryPackUint32 *map[string]uint32
+	var batteryPackFloat64 *map[string]float64
 	if bike.BatteryPack != nil {
-		bp := make(map[string]uint32, len(*bike.BatteryPack))
+		bp := make(map[string]float64, len(*bike.BatteryPack))
 		for k, v := range *bike.BatteryPack {
-			bp[k] = v
+			bp[k] = float64(v)
 		}
-		batteryPackUint32 = &bp
+		batteryPackFloat64 = &bp
 	}
 	return FlatBike{
 		Timestamp:      timestamp,
@@ -332,6 +332,6 @@ func (bike *Bike) ToFlat(timestamp uint32, placeUID uint32) FlatBike {
 		ElectricLock:   bike.ElectricLock,
 		Boardcomputer:  bike.Boardcomputer,
 		PedelecBattery: pedelecBattery,
-		BatteryPack:    batteryPackUint32,
+		BatteryPack:    batteryPackFloat64,
 	}
 }
