@@ -1,0 +1,14 @@
+services:
+  app:
+    image: ghcr.io/phd-kerger/nextbike-collector:v1.2
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.labels.collector_nextbike == true
+    volumes:
+      - /opt/swarm_shared/nextbike/values.yaml:/app/values.yaml
+      - /opt/collectors/nextbike/output-json:/app/output-json
+      - /opt/collectors/nextbike/output-parquet:/app/output-parquet
