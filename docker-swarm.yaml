@@ -12,3 +12,9 @@ services:
       - /opt/swarm_shared/nextbike/values.yaml:/app/values.yaml
       - /opt/collectors/nextbike/output-json:/app/output-json
       - /opt/collectors/nextbike/output-parquet:/app/output-parquet
+    networks:
+      - mobility-network
+
+networks:
+  mobility-network:
+    external: true
