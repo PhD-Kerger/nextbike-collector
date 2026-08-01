@@ -17,6 +17,7 @@ preferred-citation:
       given-names: Heiner
   title: Harmonizing Public Micromobility Data: A Modular Framework for Collection, Transformation, and Integration
   collection-title: European Transport Conference
+  type: generic
   year: 2026
 
 repository-code: https://github.com/PhD-Kerger/nextbike-collector
