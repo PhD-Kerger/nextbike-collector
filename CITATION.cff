@@ -9,7 +9,6 @@ authors:
     given-names: Heiner
 
 preferred-citation:
-  type: paper-conference
   authors:
     - family-names: Kerger
       given-names: Daniel
