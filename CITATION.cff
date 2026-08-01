@@ -1,24 +1,20 @@
 cff-version: 1.2.0
-title: Harmonizing Public Micromobility Data: A Modular Framework for Collection, Transformation, and Integration
-message: If you use this work, please cite it using the metadata below.
-
-authors:
-  - family-names: Kerger
-    given-names: Daniel
-  - family-names: Stuckenschmidt
-    given-names: Heiner
-
+message: Please cite the following works when using this software.
 preferred-citation:
   authors:
     - family-names: Kerger
       given-names: Daniel
     - family-names: Stuckenschmidt
       given-names: Heiner
-  title: Harmonizing Public Micromobility Data: A Modular Framework for Collection, Transformation, and Integration
-  collection-title: European Transport Conference
-  type: generic
+  identifiers:
+    - type: url
+      value: https://github.com/PhD-Kerger/nextbike-collector
+  title: >-
+    Harmonizing Public Micromobility Data: A Modular Framework for Collection,
+    Transformation, and Integration
+  url: https://github.com/PhD-Kerger/nextbike-collector
+  date-published: 2026-09-01
   year: 2026
-
-repository-code: https://github.com/PhD-Kerger/nextbike-collector
-license: Apache-2.0
-version: 2.0.4
+  month: 9
+  journal: European Transport Conference
+  type: conference-paper
